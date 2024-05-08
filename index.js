@@ -3,7 +3,9 @@ const app = express();
 const server = require("http").createServer(app);
 const websocket = require("ws");
 const path = require("path");
+const cors = require("cors"); // Importa el middleware de CORS
 
+app.use(cors());
 const wss = new websocket.Server({ server: server });
 const clients = new Map(); // Mapeo de códigos de cliente a conexiones WebSocket
 
