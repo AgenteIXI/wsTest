@@ -37,7 +37,7 @@ wss.on("connection", function connection(ws) {
 
 app.post("/send", express.json(), (req, res) => {
   const { code, message } = req.body;
-
+  console.log(code);
   if (!message) {
     return res.status(400).json({ error: "Missing message" });
   }
