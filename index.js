@@ -35,22 +35,30 @@ wss.on("connection", function connection(ws) {
   });
 });
 
-// Ruta para enviar mensajes a clientes específicos
 app.post("/send", express.json(), (req, res) => {
   const { code, message } = req.body;
 
-  if (!code || !message) {
-    return res.status(400).json({ error: "Missing code or message" });
+  if (!message) {
+    return res.status(400).json({ error: "Missing message" });
   }
 
-  const client = clients.get(code);
-  if (client) {
-    client.send(JSON.stringify({ message }));
+  if (code === -1) {
+    // Envía el mensaje a todos los clientes
+    wss.clients.forEach(client => {
+      client.send(JSON.stringify({ message }));
+    });
     return res.status(200).json({ success: true });
   } else {
-    return res.status(404).json({ error: "Client not found" });
+    const client = clients.get(code);
+    if (client) {
+      client.send(JSON.stringify({ message }));
+      return res.status(200).json({ success: true });
+    } else {
+      return res.status(404).json({ error: "Client not found" });
+    }
   }
 });
+
 
 app.get("/", (req, res) => {
   // Enviar el archivo client/index.html como respuesta
