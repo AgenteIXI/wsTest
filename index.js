@@ -37,7 +37,7 @@ wss.on("connection", function connection(ws) {
 
 app.post("/send", express.json(), (req, res) => {
   const { code, message } = req.body;
-
+  console.log(code);
   if (!message) {
     return res.status(400).json({ error: "Missing message" });
   }
@@ -54,7 +54,7 @@ app.post("/send", express.json(), (req, res) => {
       client.send(JSON.stringify({ message }));
       return res.status(200).json({ success: true });
     } else {
-      return res.status(404).json({ error: "Client not found" });
+      return res.status(404).json({ error: `Client ${code} not found` });
     }
   }
 });
