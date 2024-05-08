@@ -42,7 +42,7 @@ app.post("/send", express.json(), (req, res) => {
     return res.status(400).json({ error: "Missing message" });
   }
 
-  if (code === -1) {
+  if (code == '-1') {
     // Envía el mensaje a todos los clientes
     wss.clients.forEach(client => {
       client.send(JSON.stringify({ message }));
