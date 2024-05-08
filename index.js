@@ -54,7 +54,7 @@ app.post("/send", express.json(), (req, res) => {
       client.send(JSON.stringify({ message }));
       return res.status(200).json({ success: true });
     } else {
-      return res.status(404).json({ error: `Client ${code} not found` });
+      return res.status(404).json({ error: `Client ${code} not found` }); // Envie el code como debug
     }
   }
 });
