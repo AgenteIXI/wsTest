@@ -20,7 +20,7 @@ wss.on("connection", function connection(ws) {
     // Guarda la información del cliente en el mapa
     clients.set(data.code, { name: data.name, foto: data.foto, ws: ws, code: data.code });
 
-    console.log(`Cliente con código ${data.code.code} asociado a esta conexión`);
+    console.log(`Cliente con código ${data.code} asociado a esta conexión`);
   });
 
   ws.on("close", function close() {
