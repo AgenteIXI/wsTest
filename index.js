@@ -5,19 +5,49 @@ const websocket = require("ws");
 const path = require("path");
 
 const wss = new websocket.Server({ server: server });
+const clients = new Map(); // Mapeo de códigos de cliente a conexiones WebSocket
 
 wss.on("connection", function connection(ws) {
   console.log("Nuevo cliente conectado");
 
-  // Envía una notificación al cliente cada 5 segundos
-  const interval = setInterval(() => {
-    ws.send("¡Hola! ¡Has recibido una notificación!");
-  }, 5000);
+  ws.on("message", function incoming(message) {
+    // Parsea el mensaje JSON recibido
+    const data = JSON.parse(message);
+
+    // Asocia el código de cliente con la conexión WebSocket
+    clients.set(data.code, ws);
+
+    console.log(`Cliente con código ${data.code} asociado a esta conexión`);
+  });
 
   ws.on("close", function close() {
     console.log("Cliente desconectado");
-    clearInterval(interval); // Detiene el intervalo cuando el cliente se desconecta
+
+    // Remueve la entrada del cliente del mapeo al desconectarse
+    clients.forEach((client, code) => {
+      if (client === ws) {
+        console.log(`Cliente con código ${code} desconectado`);
+        clients.delete(code);
+      }
+    });
   });
+});
+
+// Ruta para enviar mensajes a clientes específicos
+app.post("/send", express.json(), (req, res) => {
+  const { code, message } = req.body;
+
+  if (!code || !message) {
+    return res.status(400).json({ error: "Missing code or message" });
+  }
+
+  const client = clients.get(code);
+  if (client) {
+    client.send(JSON.stringify({ message }));
+    return res.status(200).json({ success: true });
+  } else {
+    return res.status(404).json({ error: "Client not found" });
+  }
 });
 
 app.get("/", (req, res) => {
