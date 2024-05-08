@@ -7,7 +7,7 @@ const cors = require("cors"); // Importa el middleware de CORS
 
 app.use(cors());
 const wss = new websocket.Server({ server: server });
-const clients = new Map(); // Mapeo de códigos de cliente a conexiones WebSocket
+const clients = new Map(); // Mapa para almacenar información de clientes
 
 wss.on("connection", function connection(ws) {
   console.log("Nuevo cliente conectado");
@@ -15,9 +15,10 @@ wss.on("connection", function connection(ws) {
   ws.on("message", function incoming(message) {
     // Parsea el mensaje JSON recibido
     const data = JSON.parse(message);
+    console.log(data);
 
-    // Asocia el código de cliente con la conexión WebSocket
-    clients.set(data.code, ws);
+    // Guarda la información del cliente en el mapa
+    clients.set(data.code, { name: data.name, foto: data.foto, ws: ws });
 
     console.log(`Cliente con código ${data.code} asociado a esta conexión`);
   });
@@ -26,8 +27,8 @@ wss.on("connection", function connection(ws) {
     console.log("Cliente desconectado");
 
     // Remueve la entrada del cliente del mapeo al desconectarse
-    clients.forEach((client, code) => {
-      if (client === ws) {
+    clients.forEach((clientInfo, code) => {
+      if (clientInfo.ws === ws) {
         console.log(`Cliente con código ${code} desconectado`);
         clients.delete(code);
       }
@@ -42,9 +43,9 @@ app.post("/send", express.json(), (req, res) => {
     return res.status(400).json({ error: "Missing message" });
   }
 
-  if (code === '-1') {
+  if (code === "-1") {
     // Envía el mensaje a todos los clientes
-    wss.clients.forEach(client => {
+    wss.clients.forEach((client) => {
       client.send(JSON.stringify({ message }));
     });
     return res.status(200).json({ success: true });
@@ -59,11 +60,15 @@ app.post("/send", express.json(), (req, res) => {
   }
 });
 
-
-app.get("/", (req, res) => {
-  // Enviar el archivo client/index.html como respuesta
-  res.sendFile(path.join(__dirname, "client", "index.html"));
+app.get("/get", (req, res) => {
+  const activeClientsArray = Array.from(clients.values());
+  res.json(activeClientsArray);
 });
+
+// app.get("/", (req, res) => {
+//   // Enviar el archivo client/index.html como respuesta
+//   res.sendFile(path.join(__dirname, "client", "index.html"));
+// });
 
 // Servir archivos estáticos desde el directorio 'client'
 app.use(express.static(path.join(__dirname, "client")));
