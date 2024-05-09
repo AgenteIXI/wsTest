@@ -6,7 +6,7 @@ function handleWebSocketConnection(ws) {
     const data = JSON.parse(message);
     clients.set(data.code, {
       name: data.name,
-      foto: data.photo,
+      photo: data.photo,
       code: data.code,
       ws: ws,
     });
@@ -29,34 +29,37 @@ function home(req, res) {
 }
 
 function sendMessage(req, res) {
-  const { code, message } = req.body;
+  const { code, message, senderCode } = req.body;
 
   if (!message) {
     return res.status(400).json({ error: "Missing message" });
   }
 
-  if (code === "-1") {
-    // Si el código es -1, envía el mensaje a todos los clientes conectados
-    wss.clients.forEach((client) => {
-      client.send(JSON.stringify({ message }));
-    });
-    return res.status(200).json({ success: true });
-  } else {
-    // Si el código no es -1, busca al cliente correspondiente y envía el mensaje solo a ese cliente
-    const client = clients.get(code);
-    if (client) {
-      client.ws.send(JSON.stringify({ message }));
-      return res.status(200).json({ success: true });
-    } else {
-      return res.status(404).json({ error: `Client ${code} not found` });
-    }
+  if (!code) {
+    return res.status(400).json({ error: "Missing code" });
   }
+
+  // Verificar si el cliente está conectado
+  const client = clients.get(code);
+  if (!client) {
+    return res.status(404).json({ error: `Client ${code} not found` });
+  }  
+
+  const sender = clients.get(senderCode)
+
+  // Envía el mensaje al cliente incluyendo el código del remitente
+  client.ws.send(JSON.stringify({ name: sender.name, photo: sender.photo,  message }));
+  return res.status(200).json({ success: true });
 }
 
 function getActiveClients(req, res) {
   const activeClientsArray = Array.from(clients.values());
 
-  const sanitizedClients = activeClientsArray.map(client => {
+  if (activeClientsArray.length === 0) {
+    return res.json("empty");
+  }
+
+  const sanitizedClients = activeClientsArray.map((client) => {
     const { ws, ...sanitizedClient } = client;
     return sanitizedClient;
   });
@@ -65,4 +68,9 @@ function getActiveClients(req, res) {
 }
 
 
-module.exports = { handleWebSocketConnection, home, sendMessage, getActiveClients };
+module.exports = {
+  handleWebSocketConnection,
+  home,
+  sendMessage,
+  getActiveClients,
+};

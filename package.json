@@ -5,6 +5,7 @@
     "ws": "^8.16.0"
   },
   "scripts": {
-    "start": "node index.js"
+    "start": "set NODE_ENV=production && node index.js",
+    "dev": "nodemon index.js"
   }
 }

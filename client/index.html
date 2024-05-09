@@ -22,6 +22,7 @@
 
           const clientCode = document.getElementById("clientCode").value;
           const message = document.getElementById("message").value;
+          const senderCode = '032'
 
           fetch(event.target.action, {
             method: "POST",
@@ -30,6 +31,7 @@
             },
             body: JSON.stringify({
               code: clientCode,
+              senderCode: senderCode,
               message: message,
             }),
           })
