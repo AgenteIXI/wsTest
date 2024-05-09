@@ -7,7 +7,7 @@ function applyRoutes(app) {
 
   // router.get("/", home);
   router.post("/send", sendMessage);
-  // router.get("/get", getActiveClients);
+  router.get("/get", getActiveClients);
 
   app.use(router);
 }
