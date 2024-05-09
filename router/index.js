@@ -5,7 +5,7 @@ const { getActiveClients, sendMessage, home } = require("../controller/controlle
 function applyRoutes(app) {
   const router = express.Router();
 
-  router.get("/", home);
+  // router.get("/", home);
   router.post("/send", sendMessage);
   // router.get("/get", getActiveClients);
 
