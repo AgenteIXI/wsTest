@@ -1,9 +1,9 @@
 const socket = new WebSocket("ws://localhost:3000"); // Reemplaza localhost con la dirección del servidor si es necesario
 
 socket.addEventListener("open", () => {
-  const clientCode = "032";
-  const clientName = "Oliver Delgado";
-  const clientImg = "USU_032_20240424120652.png";
+  const clientCode = "000";
+  const clientName = "Admin";
+  const clientImg = "imgMostrar_000.png";
   socket.send(
     JSON.stringify({ code: clientCode, name: clientName, photo: clientImg })
   );

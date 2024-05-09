@@ -1,16 +1,26 @@
 const path = require("path");
+const { v4: uuidv4 } = require("uuid");
 const clients = new Map();
+clients.set("000", {
+  name: "admin",
+  photo: "imgMostrar_000.png",
+  code: "000",
+});
 
 function handleWebSocketConnection(ws) {
   ws.on("message", function incoming(message) {
     const data = JSON.parse(message);
-    clients.set(data.code, {
+    const uniqueId = uuidv4(); // Genera un UUID único
+    clients.set(uniqueId, {
       name: data.name,
       photo: data.photo,
       code: data.code,
+      id: uniqueId, // Usamos el UUID como ID único
       ws: ws,
     });
-    console.log(`Cliente con código ${data.code} asociado a esta conexión`);
+    console.log(
+      `Cliente con ${data.code} asociado a esta conexión con ID ${uniqueId}`
+    );
   });
 
   ws.on("close", function close() {
@@ -35,31 +45,32 @@ function sendMessage(req, res) {
     return res.status(400).json({ error: "Missing message" });
   }
 
-  if (!code) {
-    return res.status(400).json({ error: "Missing code" });
+  if (!senderCode) {
+    return res.status(400).json({ error: "Missing sender code" });
   }
 
   const sender = clients.get(senderCode);
+
+  if (!sender) {
+    return res.status(404).json({ error: `Sender ${senderCode} not found` });
+  }
+
   if (code === "-1") {
-    clients.forEach((client, clientCode) => {
+    clients.forEach((client, clientId) => {
       client.ws.send(
         JSON.stringify({ name: sender.name, photo: sender.photo, message })
       );
     });
-
-    return res.status(200).json({ success: true });
+  } else {
+    clients.forEach((client, clientId) => {
+      if (client.code === code) {
+        client.ws.send(
+          JSON.stringify({ name: sender.name, photo: sender.photo, message })
+        );
+      }
+    });
   }
 
-  // Verificar si el cliente está conectado
-  const client = clients.get(code);
-  if (!client) {
-    return res.status(404).json({ error: `Client ${code} not found` });
-  }
-
-  // Envía el mensaje al cliente incluyendo el código del remitente
-  client.ws.send(
-    JSON.stringify({ name: sender.name, photo: sender.photo, message })
-  );
   return res.status(200).json({ success: true });
 }
 
