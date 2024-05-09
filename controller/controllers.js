@@ -39,16 +39,26 @@ function sendMessage(req, res) {
     return res.status(400).json({ error: "Missing code" });
   }
 
+  const sender = clients.get(senderCode);
+  if (code === "-1") {
+    wss.clients.forEach((client) => {
+      client.send(
+        JSON.stringify({ name: sender.name, photo: sender.photo, message })
+      );
+    });
+    return res.status(200).json({ success: true });
+  }
+
   // Verificar si el cliente está conectado
   const client = clients.get(code);
   if (!client) {
     return res.status(404).json({ error: `Client ${code} not found` });
-  }  
-
-  const sender = clients.get(senderCode)
+  }
 
   // Envía el mensaje al cliente incluyendo el código del remitente
-  client.ws.send(JSON.stringify({ name: sender.name, photo: sender.photo,  message }));
+  client.ws.send(
+    JSON.stringify({ name: sender.name, photo: sender.photo, message })
+  );
   return res.status(200).json({ success: true });
 }
 
@@ -66,7 +76,6 @@ function getActiveClients(req, res) {
 
   res.json(sanitizedClients);
 }
-
 
 module.exports = {
   handleWebSocketConnection,
