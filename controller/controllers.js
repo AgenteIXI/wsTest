@@ -41,11 +41,12 @@ function sendMessage(req, res) {
 
   const sender = clients.get(senderCode);
   if (code === "-1") {
-    wss.clients.forEach((client) => {
-      client.send(
+    clients.forEach((client, clientCode) => {
+      client.ws.send(
         JSON.stringify({ name: sender.name, photo: sender.photo, message })
       );
     });
+
     return res.status(200).json({ success: true });
   }
 
