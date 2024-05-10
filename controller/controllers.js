@@ -11,11 +11,15 @@ function handleWebSocketConnection(ws) {
   ws.on("message", function incoming(message) {
     const data = JSON.parse(message);
     const uniqueId = uuidv4(); // Genera un UUID único
+    const currentDate = new Date(); // Obtiene la fecha y hora actual
     clients.set(uniqueId, {
+      id: uniqueId, // Usamos el UUID como ID único
+      code: data.code,
       name: data.name,
       photo: data.photo,
-      code: data.code,
-      id: uniqueId, // Usamos el UUID como ID único
+      version: data.version,
+      where: data.where,
+      dateAccess: currentDate, // Añade la fecha y hora actual al objeto
       ws: ws,
     });
     console.log(
@@ -33,40 +37,55 @@ function handleWebSocketConnection(ws) {
   });
 }
 
-function home(req, res) {
-  // Envía el archivo index.html como respuesta
-  res.sendFile(path.join(__dirname, "client", "index.html"));
-}
+// function home(req, res) {
+//   // Envía el archivo index.html como respuesta
+//   res.sendFile(path.join(__dirname, "client", "index.html"));
+// }
 
 function sendMessage(req, res) {
   const { code, message, senderCode } = req.body;
 
-  if (!message) {
-    return res.status(400).json({ error: "Missing message" });
+  if (!message || !senderCode) {
+    return res.status(400).json({ error: "Missing required fields" });
   }
 
-  if (!senderCode) {
-    return res.status(400).json({ error: "Missing sender code" });
+  let sender;
+  for (const client of clients.values()) {
+    if (client.code === senderCode) {
+      sender = client;
+      break;
+    }
   }
-
-  const sender = clients.get(senderCode);
 
   if (!sender) {
     return res.status(404).json({ error: `Sender ${senderCode} not found` });
   }
 
+  function sendMessageToClient(client) {
+    client.ws.send(
+      JSON.stringify({ name: sender.name, photo: sender.photo, message })
+    );
+  }
+
   if (code === "-1") {
-    clients.forEach((client, clientId) => {
-      client.ws.send(
-        JSON.stringify({ name: sender.name, photo: sender.photo, message })
-      );
+    clients.forEach((client) => {
+      if (client.ws && client.code !== senderCode) {
+        sendMessageToClient(client);
+      }
+    });
+  } else if (code.includes(",")) {
+    const codeArray = code.split(",").map((c) => c.trim());
+    codeArray.forEach((codeItem) => {
+      clients.forEach((client) => {
+        if (client.code === codeItem) {
+          sendMessageToClient(client);
+        }
+      });
     });
   } else {
-    clients.forEach((client, clientId) => {
-      if (client.code === code) {
-        client.ws.send(
-          JSON.stringify({ name: sender.name, photo: sender.photo, message })
-        );
+    clients.forEach((client) => {
+      if (client && client.ws && client.code == code) {
+        sendMessageToClient(client);
       }
     });
   }
@@ -81,17 +100,27 @@ function getActiveClients(req, res) {
     return res.json("empty");
   }
 
-  const sanitizedClients = activeClientsArray.map((client) => {
-    const { ws, ...sanitizedClient } = client;
+  let sanitizedClients = activeClientsArray.map((client) => {
+    const state = typeof client.ws !== "undefined";
+
+    const sanitizedClient = {
+      ...client,
+      state: state, // Agregar el campo 'state' al objeto del cliente
+    };
+
+    delete sanitizedClient.ws;
+
     return sanitizedClient;
   });
+
+  sanitizedClients = sanitizedClients.filter((client) => client.code !== "000");
 
   res.json(sanitizedClients);
 }
 
 module.exports = {
   handleWebSocketConnection,
-  home,
+  // home,
   sendMessage,
   getActiveClients,
 };

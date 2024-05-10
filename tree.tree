@@ -1,0 +1,18 @@
+- wsTest\
+  - client\
+    - js\
+      - client.js
+    - index.html
+  - controller\
+    - controllers.js
+  - middlewares\
+    - middlewares.js
+  - router\
+    - index.js
+  - server\
+    - websocketServer.js
+  - .gitignore
+  - index.js
+  - package-lock.json
+  - package.json
+  - _index.js
