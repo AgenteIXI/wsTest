@@ -1,4 +1,5 @@
-const path = require("path");
+const moment = require('moment');
+require('moment/locale/es'); // Cargar el idioma español
 const { v4: uuidv4 } = require("uuid");
 const clients = new Map();
 clients.set("000", {
@@ -11,7 +12,8 @@ function handleWebSocketConnection(ws) {
   ws.on("message", function incoming(message) {
     const data = JSON.parse(message);
     const uniqueId = uuidv4(); // Genera un UUID único
-    const currentDate = new Date(); // Obtiene la fecha y hora actual
+    const currentTime = moment();
+    moment.locale('es');
     clients.set(uniqueId, {
       id: uniqueId, // Usamos el UUID como ID único
       code: data.code,
@@ -19,7 +21,8 @@ function handleWebSocketConnection(ws) {
       photo: data.photo,
       version: data.version,
       where: data.where,
-      dateAccess: currentDate, // Añade la fecha y hora actual al objeto
+      lastAccessTimestamp: currentTime, // Añade la fecha y hora actual al objeto
+      lastAccess: currentTime.fromNow(), // Añade la fecha y hora actual en formato "timeAgo"
       ws: ws,
     });
     console.log(
@@ -36,11 +39,6 @@ function handleWebSocketConnection(ws) {
     });
   });
 }
-
-// function home(req, res) {
-//   // Envía el archivo index.html como respuesta
-//   res.sendFile(path.join(__dirname, "client", "index.html"));
-// }
 
 function sendMessage(req, res) {
   const { code, message, senderCode } = req.body;
