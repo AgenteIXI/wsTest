@@ -1,4 +1,12 @@
 const moment = require("moment");
+
+const geoip = require('geoip-lite');
+
+function getLocationByIP(ip) {
+  const geo = geoip.lookup(ip);
+  return geo;
+}
+
 require("moment/locale/es"); // Cargar el idioma español
 const { v4: uuidv4 } = require("uuid");
 const clients = new Map();
@@ -8,12 +16,14 @@ clients.set("000", {
   code: "000",
 });
 
-function handleWebSocketConnection(ws) {
+function handleWebSocketConnection(ws, req) {
+  // Obtener la dirección IP del cliente desde la conexión WebSocket
+  const clientIp = req.connection.remoteAddress;
+
   ws.on("message", function incoming(message) {
     const data = JSON.parse(message);
-    const uniqueId = uuidv4(); // Genera un UUID único
+    const uniqueId = uuidv4(); // Generar un UUID único
     const currentTime = moment();
-    moment.locale("es");
     clients.set(uniqueId, {
       id: uniqueId, // Usamos el UUID como ID único
       code: data.code,
@@ -21,12 +31,13 @@ function handleWebSocketConnection(ws) {
       photo: data.photo,
       version: data.version,
       where: data.where,
-      lastAccessTimestamp: currentTime, // Añade la fecha y hora actual al objeto
-      lastAccess: currentTime.fromNow(), // Añade la fecha y hora actual en formato "timeAgo"
+      lastAccessTimestamp: currentTime,
+      ip: clientIp,
+      location: getLocationByIP(clientIp),
       ws: ws,
     });
     console.log(
-      `Cliente con ${data.code} asociado a esta conexión con ID ${uniqueId}`
+      `Cliente con ${data.code} asociado a esta conexión con ID ${uniqueId} desde la IP ${clientIp}`
     );
   });
 
@@ -107,6 +118,8 @@ function getActiveClients(req, res) {
         id: client.id,
         where: client.where,
         version: client.version,
+        ip: client.ip,
+        location: client.location,
         lastAccessTimestamp: client.lastAccessTimestamp,
         lastAccess: moment(client.lastAccessTimestamp).fromNow(), // Convertir el timestamp a tiempo relativo usando Moment.js
       });
@@ -121,6 +134,8 @@ function getActiveClients(req, res) {
             id: client.id,
             where: client.where,
             version: client.version,
+            ip: client.ip,
+            location: client.location,
             lastAccessTimestamp: client.lastAccessTimestamp,
             lastAccess: moment(client.lastAccessTimestamp).fromNow(), // Convertir el timestamp a tiempo relativo usando Moment.js
           },
