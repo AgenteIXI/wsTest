@@ -1,5 +1,5 @@
-const moment = require('moment');
-require('moment/locale/es'); // Cargar el idioma español
+const moment = require("moment");
+require("moment/locale/es"); // Cargar el idioma español
 const { v4: uuidv4 } = require("uuid");
 const clients = new Map();
 clients.set("000", {
@@ -13,7 +13,7 @@ function handleWebSocketConnection(ws) {
     const data = JSON.parse(message);
     const uniqueId = uuidv4(); // Genera un UUID único
     const currentTime = moment();
-    moment.locale('es');
+    moment.locale("es");
     clients.set(uniqueId, {
       id: uniqueId, // Usamos el UUID como ID único
       code: data.code,
@@ -98,20 +98,39 @@ function getActiveClients(req, res) {
     return res.json("empty");
   }
 
-  let sanitizedClients = activeClientsArray.map((client) => {
-    const state = typeof client.ws !== "undefined";
+  const clientsMap = new Map();
 
-    const sanitizedClient = {
-      ...client,
-      state: state, // Agregar el campo 'state' al objeto del cliente
-    };
-
-    delete sanitizedClient.ws;
-
-    return sanitizedClient;
+  activeClientsArray.forEach((client) => {
+    if (clientsMap.has(client.code)) {
+      const existingClient = clientsMap.get(client.code);
+      existingClient.SESSION.push({
+        id: client.id,
+        where: client.where,
+        version: client.version,
+        lastAccessTimestamp: client.lastAccessTimestamp,
+        lastAccess: moment(client.lastAccessTimestamp).fromNow(), // Convertir el timestamp a tiempo relativo usando Moment.js
+      });
+    } else {
+      // Si no existe, creamos un nuevo objeto de cliente y lo agregamos al mapa
+      const newClient = {
+        code: client.code,
+        name: client.name,
+        photo: client.photo,
+        SESSION: [
+          {
+            id: client.id,
+            where: client.where,
+            version: client.version,
+            lastAccessTimestamp: client.lastAccessTimestamp,
+            lastAccess: moment(client.lastAccessTimestamp).fromNow(), // Convertir el timestamp a tiempo relativo usando Moment.js
+          },
+        ],
+      };
+      clientsMap.set(client.code, newClient);
+    }
   });
 
-  sanitizedClients = sanitizedClients.filter((client) => client.code !== "000");
+  const sanitizedClients = Array.from(clientsMap.values());
 
   res.json(sanitizedClients);
 }
