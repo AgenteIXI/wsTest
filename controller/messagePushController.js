@@ -52,6 +52,7 @@ async function sendMessage(req, res) {
   const payload = JSON.stringify({
     title: sender.name,
     message: message,
+    photo: sender.photo
   });
 
   try {

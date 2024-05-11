@@ -4,6 +4,6 @@ self.addEventListener("push", (e) => {
 
   self.registration.showNotification(data.title, {
     body: data.message,
-    icon: "https://media.sysallpro.com//img/usuario_admin/USU_032_20240424120652.png",
+    icon: "https://media.sysallpro.com//img/usuario_admin/" + data.photo,
   });
 });
