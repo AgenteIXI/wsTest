@@ -99,6 +99,7 @@ function getActiveClients(req, res) {
 
   res.json(sanitizedClients);
 }
+
 module.exports = {
   sendMessage,
   getActiveClients,
