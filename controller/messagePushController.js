@@ -81,7 +81,8 @@ async function sendMessage(req, res) {
         title: sender.name,
         message: message,
         photo: sender.photo,
-        for: sub.code, // Añade el código de la suscripción al payload
+        for: sub.code,
+        to: sender.code,
       });
 
       return webpush
