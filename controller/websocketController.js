@@ -40,4 +40,5 @@ function handleWebSocketConnection(ws, req) {
 
 module.exports = {
   handleWebSocketConnection,
+  clients
 };
