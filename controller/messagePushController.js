@@ -47,11 +47,11 @@ async function sendMessage(req, res) {
     return res.status(404).json({ error: `Sender ${senderCode} not found` });
   }
 
-  const payload = JSON.stringify({
-    title: sender.name,
-    message: message,
-    photo: sender.photo,
-  });
+  // const payload = JSON.stringify({
+  //   title: sender.name,
+  //   message: message,
+  //   photo: sender.photo,
+  // });
 
   try {
     let targetedSubscriptions;
@@ -72,19 +72,27 @@ async function sendMessage(req, res) {
     const notificationPromises = targetedSubscriptions.map((sub) => {
       if (!sub.subscription || !sub.subscription.endpoint) {
         console.error(`Invalid subscription detected, removing: `, sub);
-        // Aquí podrías eliminar la suscripción o marcarla como inactiva
         subscriptions.delete(sub.id); // Suponiendo que 'id' es la clave para identificar y eliminar una suscripción del Map
         return Promise.resolve();
       }
+
+      // Crear un payload específico para cada suscripción incluyendo su código
+      const personalizedPayload = JSON.stringify({
+        title: sender.name,
+        message: message,
+        photo: sender.photo,
+        for: sub.code, // Añade el código de la suscripción al payload
+      });
+
       return webpush
-        .sendNotification(sub.subscription, payload)
+        .sendNotification(sub.subscription, personalizedPayload)
         .catch((error) => {
           if (error.statusCode === 410) {
             console.error(
               `Subscription has expired or unsubscribed, removing: `,
-              sub
+              sub.code,
+              sub.lastAccessTimestamp
             );
-            // Elimina o actualiza la suscripción aquí también.
             subscriptions.delete(sub.id);
           } else {
             console.error(`Failed to send notification: `, error);
