@@ -1,6 +1,9 @@
 const express = require("express");
-const { getActiveClients, sendMessage, home } = require("../controller/controllers");
 
+const {
+  getActiveClients,
+  sendMessage,
+} = require("../controller/messageController.js");
 
 function applyRoutes(app) {
   const router = express.Router();

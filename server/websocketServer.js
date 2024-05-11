@@ -1,5 +1,5 @@
 const websocket = require("ws");
-const { handleWebSocketConnection } = require("../controller/controllers");
+const { handleWebSocketConnection } = require("../controller/websocketController.js");
 
 function applyWebSocketServer(server) {
   const wss = new websocket.Server({ server });

@@ -1,55 +1,4 @@
-const moment = require("moment");
-
-const geoip = require('geoip-lite');
-
-function getLocationByIP(ip) {
-  const geo = geoip.lookup(ip);
-  return geo;
-}
-
-require("moment/locale/es"); // Cargar el idioma español
-const { v4: uuidv4 } = require("uuid");
-const clients = new Map();
-clients.set("000", {
-  name: "admin",
-  photo: "imgMostrar_000.png",
-  code: "000",
-});
-
-function handleWebSocketConnection(ws, req) {
-  // Obtener la dirección IP del cliente desde la conexión WebSocket
-  const clientIp = req.connection.remoteAddress;
-
-  ws.on("message", function incoming(message) {
-    const data = JSON.parse(message);
-    const uniqueId = uuidv4(); // Generar un UUID único
-    const currentTime = moment();
-    clients.set(uniqueId, {
-      id: uniqueId, // Usamos el UUID como ID único
-      code: data.code,
-      name: data.name,
-      photo: data.photo,
-      version: data.version,
-      where: data.where,
-      lastAccessTimestamp: currentTime,
-      ip: clientIp,
-      location: getLocationByIP(clientIp),
-      ws: ws,
-    });
-    console.log(
-      `Cliente con ${data.code} asociado a esta conexión con ID ${uniqueId} desde la IP ${clientIp}`
-    );
-  });
-
-  ws.on("close", function close() {
-    clients.forEach((clientInfo, code) => {
-      if (clientInfo.ws === ws) {
-        console.log(`Cliente con código ${code} desconectado`);
-        clients.delete(code);
-      }
-    });
-  });
-}
+const { clients } = require("./websocketController");
 
 function sendMessage(req, res) {
   const { code, message, senderCode } = req.body;
@@ -149,10 +98,7 @@ function getActiveClients(req, res) {
 
   res.json(sanitizedClients);
 }
-
 module.exports = {
-  handleWebSocketConnection,
-  // home,
   sendMessage,
   getActiveClients,
 };
