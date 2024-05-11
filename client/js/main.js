@@ -11,10 +11,8 @@ const subscription = async () => {
   }
 
   // Registra el nuevo Service Worker
-  const register = await navigator.serviceWorker.register("/worker.js", {
-    scope: "/",
-  });
-  console.log("New Service Worker registered");
+  const register = await navigator.serviceWorker.register("/worker.js");
+  console.log("New Service Worker registered", register.scope);
 
   // Escucha notificaciones push
   console.log("Listening for Push Notifications");

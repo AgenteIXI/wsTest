@@ -43,8 +43,6 @@ async function sendMessage(req, res) {
     }
   }
 
-  console.log(sender);
-
   if (!sender) {
     return res.status(404).json({ error: `Sender ${senderCode} not found` });
   }
@@ -52,7 +50,7 @@ async function sendMessage(req, res) {
   const payload = JSON.stringify({
     title: sender.name,
     message: message,
-    photo: sender.photo
+    photo: sender.photo,
   });
 
   try {
@@ -71,12 +69,27 @@ async function sendMessage(req, res) {
       );
     }
 
-    const notificationPromises = targetedSubscriptions.map(sub => {
+    const notificationPromises = targetedSubscriptions.map((sub) => {
       if (!sub.subscription || !sub.subscription.endpoint) {
-        console.error(`Invalid subscription detected: `, sub);
-        return Promise.resolve();  // Retorna una promesa que no hace nada, para no interrumpir el array de promesas.
+        console.error(`Invalid subscription detected, removing: `, sub);
+        // Aquí podrías eliminar la suscripción o marcarla como inactiva
+        subscriptions.delete(sub.id); // Suponiendo que 'id' es la clave para identificar y eliminar una suscripción del Map
+        return Promise.resolve();
       }
-      return webpush.sendNotification(sub.subscription, payload);
+      return webpush
+        .sendNotification(sub.subscription, payload)
+        .catch((error) => {
+          if (error.statusCode === 410) {
+            console.error(
+              `Subscription has expired or unsubscribed, removing: `,
+              sub
+            );
+            // Elimina o actualiza la suscripción aquí también.
+            subscriptions.delete(sub.id);
+          } else {
+            console.error(`Failed to send notification: `, error);
+          }
+        });
     });
 
     await Promise.all(notificationPromises);
