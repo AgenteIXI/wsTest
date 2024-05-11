@@ -6,7 +6,7 @@ let pushSubscription;
 
 router.post("/subscription", async (req, res) => {
   pushSubscription = req.body;
-  res.status(200).json({ name: "test" });
+  res.status(200).json();
 });
 
 router.post("/sendMessage", async (req, res) => {
@@ -18,6 +18,7 @@ router.post("/sendMessage", async (req, res) => {
   });
   try {
     await webpush.sendNotification(pushSubscription, payload);
+    res.status(200).json();
   } catch (error) {
     console.error(error);
   }
