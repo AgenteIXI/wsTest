@@ -71,9 +71,13 @@ async function sendMessage(req, res) {
       );
     }
 
-    const notificationPromises = targetedSubscriptions.map((sub) =>
-      webpush.sendNotification(sub.subscription, payload)
-    );
+    const notificationPromises = targetedSubscriptions.map(sub => {
+      if (!sub.subscription || !sub.subscription.endpoint) {
+        console.error(`Invalid subscription detected: `, sub);
+        return Promise.resolve();  // Retorna una promesa que no hace nada, para no interrumpir el array de promesas.
+      }
+      return webpush.sendNotification(sub.subscription, payload);
+    });
 
     await Promise.all(notificationPromises);
 
