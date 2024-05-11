@@ -3,6 +3,11 @@ const { v4: uuidv4 } = require("uuid");
 const { getLocationByIP } = require("../middlewares/middlewares.js");
 
 const clients = new Map();
+clients.set("000", {
+  name: "admin",
+  photo: "imgMostrar_000.png",
+  code: "000",
+});
 
 function handleWebSocketConnection(ws, req) {
   const clientIp = req.connection.remoteAddress;
