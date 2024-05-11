@@ -27,20 +27,20 @@ const PUBLIC_VAPID_KEY =
 //   console.log("Subscripted");
 // };
 
-const form = document.querySelector("#sendMessage");
-const message = document.querySelector("#message");
+// const form = document.querySelector("#sendMessage");
+// const message = document.querySelector("#message");
 
-form.addEventListener("submit", (e) => {
-  e.preventDefault();
-  fetch("/sendMessage", {
-    method: "POST",
-    body: JSON.stringify({ message: message.value, senderCode: '000', code: "032" }),
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+// form.addEventListener("submit", (e) => {
+//   e.preventDefault();
+//   fetch("/sendMessage", {
+//     method: "POST",
+//     body: JSON.stringify({ message: message.value, senderCode: '000', code: "032" }),
+//     headers: {
+//       "Content-Type": "application/json",
+//     },
+//   });
 
-  form.reset();
-});
+//   form.reset();
+// });
 
 // subscription();
