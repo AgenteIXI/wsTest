@@ -143,6 +143,7 @@ function getSubscription(req, res) {
   const sanitizedSubscriptions = subscriptions.map((sub) => ({
     code: sub.code,
     name: sub.name,
+    hasEndpoint: sub.subscription && sub.subscription.endpoint ? true : false, // Verifica si existe un endpoint válido
     sessions: [
       {
         id: sub.id,
