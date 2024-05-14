@@ -12,4 +12,13 @@ function getLocationByIP(ip) {
   return geo;
 }
 
-module.exports = { applyMiddleware, getLocationByIP };
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    return forwarded.split(',')[0]; // Tomamos la primera IP si hay varias.
+  }
+  return req.connection.remoteAddress;
+}
+
+
+module.exports = { applyMiddleware, getLocationByIP, getClientIp };

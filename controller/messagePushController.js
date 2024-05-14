@@ -1,16 +1,21 @@
-const { webpush, subscriptions } = require("./webpushController.js");
+const { webpush } = require("./webpushController.js");
 const moment = require("moment");
 
+const fs = require("fs");
+const path = require("path");
+
 const { v4: uuidv4 } = require("uuid");
-const { getLocationByIP } = require("../middlewares/middlewares.js");
+const {
+  getLocationByIP,
+  getClientIp,
+} = require("../middlewares/middlewares.js");
 
 async function addSubscription(req, res) {
   const data = req.body;
-  const clientIp = req.connection.remoteAddress;
-
+  const clientIp = getClientIp(req);
   const uniqueId = uuidv4();
   const currentTime = moment();
-  subscriptions.set(uniqueId, {
+  const subscriptionData = {
     id: uniqueId,
     code: data.code,
     name: data.name,
@@ -21,145 +26,137 @@ async function addSubscription(req, res) {
     ip: clientIp,
     location: getLocationByIP(clientIp),
     subscription: data.sub,
-  });
-  console.log(
-    `Subscriptor con ${data.code} asociado a esta conexión con ID ${uniqueId} desde la IP ${clientIp}`
-  );
+  };
 
-  res
-    .status(200)
-    .json({ success: true, message: "Subscription saved successfully." });
+  const subscriptionsDir = path.join(__dirname, "../data");
+  const subscriptionsFile = path.join(subscriptionsDir, "subscriptions.json");
+
+  // Asegúrate de que la carpeta 'data' exista
+  if (!fs.existsSync(subscriptionsDir)) {
+    fs.mkdirSync(subscriptionsDir);
+    console.log("Created 'data' directory");
+  }
+
+  let existingSubscriptions = [];
+  // Verifica si el archivo existe
+  if (fs.existsSync(subscriptionsFile)) {
+    console.log("Reading existing subscriptions from file.");
+    existingSubscriptions = JSON.parse(
+      fs.readFileSync(subscriptionsFile, "utf8")
+    );
+  }
+
+  existingSubscriptions.push(subscriptionData);
+  try {
+    fs.writeFileSync(
+      subscriptionsFile,
+      JSON.stringify(existingSubscriptions, null, 2),
+      "utf8"
+    );
+    console.log("Subscription data saved successfully.");
+  } catch (error) {
+    console.error("Error writing to file:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to save subscription data." });
+    return;
+  }
+
+  console.log(
+    `Subscriber with code ${data.code} associated with connection ID ${uniqueId} from IP ${clientIp}`
+  );
+  res.status(200).json({
+    success: true,
+    message: "Subscription saved successfully.",
+    codeRegister: uniqueId,
+  });
 }
 
 async function sendMessage(req, res) {
   const { code, message, senderCode } = req.body;
+  const subscriptionsFile = path.join(
+    __dirname,
+    "../data",
+    "subscriptions.json"
+  );
+  let subscriptions = [];
 
-  let sender;
-  // Asumiendo que subscriptions es un Map
-  for (const subscription of subscriptions.values()) {
-    if (subscription.code === senderCode) {
-      sender = subscription;
-      break;
-    }
+  if (fs.existsSync(subscriptionsFile)) {
+    subscriptions = JSON.parse(fs.readFileSync(subscriptionsFile, "utf8"));
   }
 
+  let sender = subscriptions.find((sub) => sub.code === senderCode);
   if (!sender) {
     return res.status(404).json({ error: `Sender ${senderCode} not found` });
   }
 
-  // const payload = JSON.stringify({
-  //   title: sender.name,
-  //   message: message,
-  //   photo: sender.photo,
-  // });
+  let targetedSubscriptions = [];
+  if (code === "-1") {
+    targetedSubscriptions = subscriptions;
+  } else if (code.includes(",")) {
+    const codes = code.split(",");
+    targetedSubscriptions = subscriptions.filter((sub) =>
+      codes.includes(sub.code)
+    );
+  } else {
+    targetedSubscriptions = subscriptions.filter((sub) => sub.code === code);
+  }
 
-  try {
-    let targetedSubscriptions;
-
-    if (code === "-1") {
-      targetedSubscriptions = [...subscriptions.values()];
-    } else if (code.includes(",")) {
-      const codes = code.split(",");
-      targetedSubscriptions = Array.from(subscriptions.values()).filter((sub) =>
-        codes.includes(sub.code)
-      );
-    } else {
-      targetedSubscriptions = Array.from(subscriptions.values()).filter(
-        (sub) => sub.code === code
-      );
-    }
-
-    const notificationPromises = targetedSubscriptions.map((sub) => {
-      if (!sub.subscription || !sub.subscription.endpoint) {
-        console.error(`Invalid subscription detected, removing: `, sub);
-        subscriptions.delete(sub.id); // Suponiendo que 'id' es la clave para identificar y eliminar una suscripción del Map
-        return Promise.resolve();
-      }
-
-      // Crear un payload específico para cada suscripción incluyendo su código
-      const personalizedPayload = JSON.stringify({
-        title: sender.name,
-        message: message,
-        photo: sender.photo,
-        for: sub.code,
-        to: sender.code,
-      });
-
-      return webpush
-        .sendNotification(sub.subscription, personalizedPayload)
-        .catch((error) => {
-          if (error.statusCode === 410) {
-            console.error(
-              `Subscription has expired or unsubscribed, removing: `,
-              sub.code,
-              sub.lastAccessTimestamp
-            );
-            subscriptions.delete(sub.id);
-          } else {
-            console.error(`Failed to send notification: `, error);
-          }
-        });
+  const notificationPromises = targetedSubscriptions.map((sub) => {
+    const personalizedPayload = JSON.stringify({
+      title: sender.name,
+      message: message,
+      photo: sender.photo,
+      for: sub.code,
+      to: sender.code,
     });
 
-    await Promise.all(notificationPromises);
+    return webpush
+      .sendNotification(sub.subscription, personalizedPayload)
+      .catch((error) => {
+        console.error(`Failed to send notification: `, error);
+      });
+  });
 
-    res
-      .status(200)
-      .json({ success: true, message: "Notifications sent successfully!" });
-  } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to send notifications." });
-  }
+  await Promise.all(notificationPromises);
+  res
+    .status(200)
+    .json({ success: true, message: "Notifications sent successfully!" });
 }
 
 function getSubscription(req, res) {
-  const activesubscriptionsArray = Array.from(subscriptions.values());
+  const subscriptionsFile = path.join(
+    __dirname,
+    "../data",
+    "subscriptions.json"
+  );
+  let subscriptions = [];
 
-  if (activesubscriptionsArray.length === 0) {
-    return res.json("empty");
+  if (fs.existsSync(subscriptionsFile)) {
+    subscriptions = JSON.parse(fs.readFileSync(subscriptionsFile, "utf8"));
   }
 
-  const subscriptionsMap = new Map();
+  if (subscriptions.length === 0) {
+    return res.json({ message: "No active subscriptions" });
+  }
 
-  activesubscriptionsArray.forEach((client) => {
-    if (subscriptionsMap.has(client.code)) {
-      const existingClient = subscriptionsMap.get(client.code);
-      existingClient.SESSION.push({
-        id: client.id,
-        where: client.where,
-        version: client.version,
-        ip: client.ip,
-        location: client.location,
-        lastAccessTimestamp: client.lastAccessTimestamp,
-        lastAccess: moment(client.lastAccessTimestamp).fromNow(), // Convertir el timestamp a tiempo relativo usando Moment.js
-      });
-    } else {
-      // Si no existe, creamos un nuevo objeto de cliente y lo agregamos al mapa
-      const newClient = {
-        code: client.code,
-        name: client.name,
-        photo: client.photo,
-        SESSION: [
-          {
-            id: client.id,
-            where: client.where,
-            version: client.version,
-            ip: client.ip,
-            location: client.location,
-            lastAccessTimestamp: client.lastAccessTimestamp,
-            lastAccess: moment(client.lastAccessTimestamp).fromNow(), // Convertir el timestamp a tiempo relativo usando Moment.js
-          },
-        ],
-      };
-      subscriptionsMap.set(client.code, newClient);
-    }
-  });
+  const sanitizedSubscriptions = subscriptions.map((sub) => ({
+    code: sub.code,
+    name: sub.name,
+    sessions: [
+      {
+        id: sub.id,
+        where: sub.where,
+        version: sub.version,
+        ip: sub.ip,
+        location: sub.location,
+        lastAccessTimestamp: sub.lastAccessTimestamp,
+        lastAccess: moment(sub.lastAccessTimestamp).fromNow(),
+      },
+    ],
+  }));
 
-  const sanitizedsubscriptions = Array.from(subscriptionsMap.values());
-
-  res.json(sanitizedsubscriptions);
+  res.json(sanitizedSubscriptions);
 }
 
 module.exports = { addSubscription, sendMessage, getSubscription };
