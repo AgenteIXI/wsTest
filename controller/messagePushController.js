@@ -54,6 +54,19 @@ async function addSubscription(req, res) {
       "utf8"
     );
     console.log("Subscription data saved successfully.");
+
+    // Leer y mostrar el contenido del archivo JSON para verificar
+    const updatedSubscriptions = JSON.parse(
+      fs.readFileSync(subscriptionsFile, "utf8")
+    );
+    console.log(
+      "Updated subscriptions data:",
+      updatedSubscriptions.map((sub) => ({
+        code: sub.code,
+        fullname: sub.name,
+        endpoint: sub.subscription ? true : false,
+      }))
+    );
   } catch (error) {
     console.error("Error writing to file:", error);
     res
